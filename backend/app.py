@@ -38,6 +38,7 @@ def init_db():
             userid VARCHAR(100) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            password_plain VARCHAR(255) DEFAULT NULL,
             role VARCHAR(50) NOT NULL,
             dept VARCHAR(100) NOT NULL,
             year VARCHAR(50) DEFAULT NULL,
@@ -45,6 +46,11 @@ def init_db():
             status VARCHAR(50) NOT NULL DEFAULT 'approved'
         )
     ''')
+
+    # Migration check: add password_plain column if it does not exist
+    cursor.execute("SHOW COLUMNS FROM users LIKE 'password_plain'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE users ADD COLUMN password_plain VARCHAR(255) DEFAULT NULL")
     
     # Create Attendance Table
     cursor.execute('''
@@ -65,13 +71,20 @@ def init_db():
     # Seed default faculty if empty
     cursor.execute("SELECT * FROM users WHERE userid = 'faculty'")
     if not cursor.fetchone():
-        cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept) VALUES (%s, %s, %s, %s, %s)",
-                       ('faculty', 'Dr. Satish Kumar', generate_password_hash('faculty123'), 'faculty', 'CSE'))
+        cursor.execute("INSERT INTO users (userid, name, password_hash, password_plain, role, dept) VALUES (%s, %s, %s, %s, %s, %s)",
+                       ('faculty', 'Dr. Satish Kumar', generate_password_hash('faculty123'), 'faculty123', 'faculty', 'CSE'))
                        
+    # Seed default student Mahadev if empty
     cursor.execute("SELECT * FROM users WHERE userid = '24X01A05AT'")
     if not cursor.fetchone():
-        cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept, year, section, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                       ('24X01A05AT', 'Mahadev', generate_password_hash('24X01A05AT'), 'student', 'CSE', 'III', 'B', 'approved'))
+        cursor.execute("INSERT INTO users (userid, name, password_hash, password_plain, role, dept, year, section, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                       ('24X01A05AT', 'Mahadev', generate_password_hash('24X01A05AT'), '24X01A05AT', 'student', 'CSE', 'III', 'B', 'approved'))
+
+    # Seed default admin if empty
+    cursor.execute("SELECT * FROM users WHERE userid = 'admin'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO users (userid, name, password_hash, password_plain, role, dept) VALUES (%s, %s, %s, %s, %s, %s)",
+                       ('admin', 'System Admin', generate_password_hash('admin123'), 'admin123', 'admin', 'ALL'))
                        
     # Revert fake generated attendance to just single real row
     cursor.execute("DELETE FROM attendance WHERE roll_number = '24X01A05AT' AND (date LIKE '2026-06-%%' OR date <= '2026-07-09')")
@@ -155,8 +168,8 @@ def register_student():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept, year, section, status) VALUES (%s, %s, %s, 'student', %s, %s, %s, 'pending')",
-                       (roll_number, name, generate_password_hash(password), dept, year, section))
+        cursor.execute("INSERT INTO users (userid, name, password_hash, password_plain, role, dept, year, section, status) VALUES (%s, %s, %s, %s, 'student', %s, %s, %s, 'pending')",
+                       (roll_number, name, generate_password_hash(password), password, dept, year, section))
         conn.commit()
     except pymysql.err.IntegrityError:
         return jsonify({"error": "Roll Number already registered"}), 400
@@ -292,8 +305,8 @@ def update_user_api():
             if password:
                 pwd_hash = generate_password_hash(password)
                 cursor.execute(
-                    "UPDATE users SET name = %s, dept = %s, password_hash = %s WHERE userid = %s AND role = 'faculty'",
-                    (name, dept, pwd_hash, user_id)
+                    "UPDATE users SET name = %s, dept = %s, password_hash = %s, password_plain = %s WHERE userid = %s AND role = 'faculty'",
+                    (name, dept, pwd_hash, password, user_id)
                 )
             else:
                 cursor.execute(
@@ -310,8 +323,8 @@ def update_user_api():
             if password:
                 pwd_hash = generate_password_hash(password)
                 cursor.execute(
-                    "UPDATE users SET name = %s, dept = %s, year = %s, section = %s, password_hash = %s WHERE userid = %s AND role = 'student'",
-                    (name, dept, year, section, pwd_hash, user_id)
+                    "UPDATE users SET name = %s, dept = %s, year = %s, section = %s, password_hash = %s, password_plain = %s WHERE userid = %s AND role = 'student'",
+                    (name, dept, year, section, pwd_hash, password, user_id)
                 )
             else:
                 cursor.execute(
