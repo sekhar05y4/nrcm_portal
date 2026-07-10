@@ -117,7 +117,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       if (tot > 0) {
         val['percentage'] = (pres / tot) * 100.0;
       } else {
-        val['percentage'] = 100.0;
+        val['percentage'] = 0.0;
       }
     });
     
@@ -439,7 +439,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       semesterTotal += (val['total'] as int);
       semesterPresent += (val['present'] as int);
     });
-    final double semesterPercentage = semesterTotal > 0 ? (semesterPresent / semesterTotal) * 100.0 : 100.0;
+    final double semesterPercentage = semesterTotal > 0 ? (semesterPresent / semesterTotal) * 100.0 : 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
