@@ -1,7 +1,9 @@
 import os
 import sqlite3
+import csv
+import io
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -163,6 +165,170 @@ def reject_student():
     conn.commit()
     conn.close()
     return jsonify({"message": f"Application {roll_number} removed from database."}), 200
+
+@app.route('/api/admin/stats', methods=['GET'])
+def get_admin_stats():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM students WHERE status = 'approved'")
+    approved_students = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM students WHERE status = 'pending'")
+    pending_students = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM faculty")
+    total_faculty = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM attendance")
+    total_attendance = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return jsonify({
+        "approved_students": approved_students,
+        "pending_students": pending_students,
+        "total_faculty": total_faculty,
+        "total_attendance": total_attendance
+    }), 200
+
+@app.route('/api/admin/users', methods=['GET'])
+def get_all_users():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 1. Fetch Faculty
+    cursor.execute("SELECT username, name, dept FROM faculty")
+    faculties = cursor.fetchall()
+    
+    # 2. Fetch Students
+    cursor.execute("SELECT roll_number, name, dept, year, section, status FROM students")
+    students = cursor.fetchall()
+    conn.close()
+    
+    users_list = []
+    
+    # Add admin
+    users_list.append({
+        "user_id": "admin",
+        "name": "System Admin",
+        "role": "admin",
+        "is_approved": True,
+        "details": "All Departments"
+    })
+    
+    # Add faculties
+    for f in faculties:
+        users_list.append({
+            "user_id": f['username'],
+            "name": f['name'],
+            "role": "faculty",
+            "is_approved": True,
+            "details": f['dept']
+        })
+        
+    # Add students
+    for s in students:
+        users_list.append({
+            "user_id": s['roll_number'],
+            "name": s['name'],
+            "role": "student",
+            "is_approved": s['status'] == 'approved',
+            "details": f"{s['dept']} ({s['year']} Year - Sec {s['section']})"
+        })
+        
+    return jsonify(users_list), 200
+
+@app.route('/api/admin/users/delete', methods=['POST'])
+def delete_user_api():
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    role = data.get('role')
+    
+    if not user_id or not role:
+        return jsonify({"error": "Missing user_id or role"}), 400
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        if role == 'faculty':
+            cursor.execute("DELETE FROM faculty WHERE username = ?", (user_id,))
+            conn.commit()
+            conn.close()
+            return jsonify({"message": f"Faculty {user_id} deleted successfully."}), 200
+        elif role == 'student':
+            # Delete attendance first
+            cursor.execute("DELETE FROM attendance WHERE roll_number = ?", (user_id,))
+            # Delete student
+            cursor.execute("DELETE FROM students WHERE roll_number = ?", (user_id,))
+            conn.commit()
+            conn.close()
+            return jsonify({"message": f"Student {user_id} deleted successfully."}), 200
+        else:
+            conn.close()
+            return jsonify({"error": "Cannot delete admin user"}), 400
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/faculty/add', methods=['POST'])
+def add_faculty_api():
+    data = request.get_json() or {}
+    username = data.get('username')
+    name = data.get('name')
+    password = data.get('password')
+    dept = data.get('dept')
+    
+    if not all([username, name, password, dept]):
+        return jsonify({"error": "All fields are required"}), 400
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if username exists in faculty
+    cursor.execute("SELECT * FROM faculty WHERE username = ?", (username,))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Faculty username already exists"}), 400
+        
+    try:
+        cursor.execute("INSERT INTO faculty (username, password_hash, name, dept) VALUES (?, ?, ?, ?)",
+                       (username, generate_password_hash(password), name, dept))
+        conn.commit()
+        conn.close()
+        return jsonify({"message": f"Faculty member {name} registered successfully."}), 201
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/download/master', methods=['GET'])
+def download_master_history():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.date, a.dept, a.year, a.section, a.roll_number, s.name, a.period, a.status, a.marked_by
+        FROM attendance a
+        JOIN students s ON a.roll_number = s.roll_number
+        ORDER BY a.date DESC, a.section ASC, a.roll_number ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Date', 'Department', 'Year', 'Section', 'Roll Number', 'Student Name', 'Period', 'Status', 'Marked By'])
+    
+    for r in rows:
+        writer.writerow([r['date'], r['dept'], r['year'], r['section'], r['roll_number'], r['name'], r['period'], r['status'], r['marked_by']])
+        
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=Master_Attendance_Report.csv"}
+    )
+
 
 @app.route('/api/faculty/students', methods=['GET'])
 def get_roster_students():

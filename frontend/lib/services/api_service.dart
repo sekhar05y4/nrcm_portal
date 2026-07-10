@@ -75,4 +75,54 @@ class ApiService {
     }
     return {'present': [], 'absent': []};
   }
+
+  static Future<Map<String, dynamic>> getAdminStats() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/admin/stats'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+    return {};
+  }
+
+  static Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/admin/users'));
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<bool> deleteUser(String userId, String role) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admin/users/delete'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': userId, 'role': role}),
+      );
+      return response.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
+  static Future<Map<String, dynamic>> addFaculty(String username, String name, String password, String dept) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admin/faculty/add'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'name': name,
+          'password': password,
+          'dept': dept
+        }),
+      );
+      return {'statusCode': response.statusCode, 'body': jsonDecode(response.body)};
+    } catch (e) {
+      return {'statusCode': 500, 'body': {'error': e.toString()}};
+    }
+  }
 }
