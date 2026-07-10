@@ -96648,7 +96648,7 @@ B.b.j3(g)
 a7.a=a7.b=0
 a3.ax.ak(0,new A.azo(a7))
 r=a7.b
-f=r>0?a7.a/r*100:100
+f=r>0?a7.a/r*100:0
 r=A.bZ(8)
 o=A.LN(B.ay,1.5)
 l=A.bG(a4,A.bJ(B.LK,B.L,B.n,B.q),B.m,a4,a4,B.nT,a4,a4,a4,B.ch,a4,a4,1/0)
@@ -96735,7 +96735,7 @@ $S:0}
 A.azw.prototype={
 $2(a,b){var s="percentage",r=J.av(b),q=r.h(b,"total"),p=r.h(b,"present")
 if(q>0)r.m(b,s,p/q*100)
-else r.m(b,s,100)},
+else r.m(b,s,0)},
 $S:232}
 A.azx.prototype={
 $0(){var s,r=this,q=r.b
