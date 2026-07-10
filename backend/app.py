@@ -12,10 +12,10 @@ CORS(app)  # Enables cross-origin requests for Flutter Web local development
 
 def get_db_connection():
     conn = pymysql.connect(
-        host='localhost',
-        user='root',
-        password='mysqlpass',
-        database='nrcm_att',
+        host=os.environ.get('DB_HOST', 'localhost'),
+        user=os.environ.get('DB_USER', 'root'),
+        password=os.environ.get('DB_PASS', 'mysqlpass'),
+        database=os.environ.get('DB_NAME', 'nrcm_att'),
         cursorclass=pymysql.cursors.DictCursor
     )
     return conn
