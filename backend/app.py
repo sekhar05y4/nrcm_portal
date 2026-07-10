@@ -24,30 +24,28 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Students Table (face encoding data columns removed)
+    # Check if 'users' table exists. If not, drop the old tables so we can create new ones.
+    cursor.execute("SHOW TABLES LIKE 'users'")
+    if not cursor.fetchone():
+        cursor.execute("DROP TABLE IF EXISTS attendance")
+        cursor.execute("DROP TABLE IF EXISTS students")
+        cursor.execute("DROP TABLE IF EXISTS faculty")
+        
+    # Create Users Table
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS students (
-            roll_number VARCHAR(100) PRIMARY KEY,
+        CREATE TABLE IF NOT EXISTS users (
+            userid VARCHAR(100) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL,
             dept VARCHAR(100) NOT NULL,
-            year VARCHAR(50) NOT NULL,
-            section VARCHAR(50) NOT NULL,
-            status VARCHAR(50) NOT NULL DEFAULT 'pending'
+            year VARCHAR(50) DEFAULT NULL,
+            section VARCHAR(50) DEFAULT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'approved'
         )
     ''')
     
-    # Faculty Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS faculty (
-            username VARCHAR(100) PRIMARY KEY,
-            password_hash VARCHAR(255) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            dept VARCHAR(100) NOT NULL
-        )
-    ''')
-    
-    # Attendance Table
+    # Create Attendance Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS attendance (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -59,15 +57,29 @@ def init_db():
             section VARCHAR(50) NOT NULL,
             status VARCHAR(50) NOT NULL,
             marked_by VARCHAR(255) NOT NULL,
-            FOREIGN KEY (roll_number) REFERENCES students (roll_number)
+            FOREIGN KEY (roll_number) REFERENCES users (userid)
         )
     ''')
     
-    # Seed a default admin and faculty user for testing if tables are empty
-    cursor.execute("SELECT * FROM faculty WHERE username = 'faculty'")
+    # Seed default faculty if empty
+    cursor.execute("SELECT * FROM users WHERE userid = 'faculty'")
     if not cursor.fetchone():
-        cursor.execute("INSERT INTO faculty (username, password_hash, name, dept) VALUES (%s, %s, %s, %s)",
-                       ('faculty', generate_password_hash('faculty123'), 'Dr. Satish Kumar', 'CSE'))
+        cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept) VALUES (%s, %s, %s, %s, %s)",
+                       ('faculty', 'Dr. Satish Kumar', generate_password_hash('faculty123'), 'faculty', 'CSE'))
+                       
+    # Seed default student Mahadev if empty
+    cursor.execute("SELECT * FROM users WHERE userid = '24X01A05AT'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept, year, section, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                       ('24X01A05AT', 'Mahadev', generate_password_hash('student123'), 'student', 'CSE', 'III', 'B', 'approved'))
+                       
+    # Seed attendance row for Mahadev if empty
+    cursor.execute("SELECT * FROM attendance WHERE roll_number = '24X01A05AT'")
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO attendance (roll_number, date, period, dept, year, section, status, marked_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            ('24X01A05AT', '2026-07-10', 'Period 1', 'CSE', 'III', 'B', 'Present', 'Dr. Satish Kumar')
+        )
     
     conn.commit()
     conn.close()
@@ -94,7 +106,7 @@ def login():
             return jsonify({"error": "Invalid Admin Credentials"}), 401
 
     elif role == 'Faculty':
-        cursor.execute("SELECT * FROM faculty WHERE username = %s", (username,))
+        cursor.execute("SELECT * FROM users WHERE userid = %s AND role = 'faculty'", (username,))
         user = cursor.fetchone()
         conn.close()
         if user and check_password_hash(user['password_hash'], password):
@@ -102,7 +114,7 @@ def login():
         return jsonify({"error": "Invalid Faculty Credentials"}), 401
 
     elif role == 'Student/Parent':
-        cursor.execute("SELECT * FROM students WHERE roll_number = %s", (username,))
+        cursor.execute("SELECT * FROM users WHERE userid = %s AND role = 'student'", (username,))
         user = cursor.fetchone()
         conn.close()
         if user:
@@ -130,8 +142,8 @@ def register_student():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO students (roll_number, name, password_hash, dept, year, section, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                       (roll_number, name, generate_password_hash(password), dept, year, section, 'pending'))
+        cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept, year, section, status) VALUES (%s, %s, %s, 'student', %s, %s, %s, 'pending')",
+                       (roll_number, name, generate_password_hash(password), dept, year, section))
         conn.commit()
     except pymysql.err.IntegrityError:
         return jsonify({"error": "Roll Number already registered"}), 400
@@ -144,7 +156,7 @@ def register_student():
 def get_pending_students():
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT roll_number, name, dept, year, section FROM students WHERE status = 'pending'")
+    cursor.execute("SELECT userid as roll_number, name, dept, year, section FROM users WHERE status = 'pending' AND role = 'student'")
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(ix) for ix in rows]), 200
@@ -154,7 +166,7 @@ def approve_student():
     roll_number = request.get_json().get('roll_number')
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE students SET status = 'approved' WHERE roll_number = %s", (roll_number,))
+    cursor.execute("UPDATE users SET status = 'approved' WHERE userid = %s AND role = 'student'", (roll_number,))
     conn.commit()
     conn.close()
     return jsonify({"message": f"Student {roll_number} approved successfully."}), 200
@@ -164,7 +176,7 @@ def reject_student():
     roll_number = request.get_json().get('roll_number')
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM students WHERE roll_number = %s", (roll_number,))
+    cursor.execute("DELETE FROM users WHERE userid = %s AND role = 'student'", (roll_number,))
     conn.commit()
     conn.close()
     return jsonify({"message": f"Application {roll_number} removed from database."}), 200
@@ -174,13 +186,13 @@ def get_admin_stats():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT COUNT(*) as count FROM students WHERE status = 'approved'")
+    cursor.execute("SELECT COUNT(*) as count FROM users WHERE status = 'approved' AND role = 'student'")
     approved_students = cursor.fetchone()['count']
     
-    cursor.execute("SELECT COUNT(*) as count FROM students WHERE status = 'pending'")
+    cursor.execute("SELECT COUNT(*) as count FROM users WHERE status = 'pending' AND role = 'student'")
     pending_students = cursor.fetchone()['count']
     
-    cursor.execute("SELECT COUNT(*) as count FROM faculty")
+    cursor.execute("SELECT COUNT(*) as count FROM users WHERE role = 'faculty'")
     total_faculty = cursor.fetchone()['count']
     
     cursor.execute("SELECT COUNT(*) as count FROM attendance")
@@ -200,13 +212,8 @@ def get_all_users():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Fetch Faculty
-    cursor.execute("SELECT username, name, dept FROM faculty")
-    faculties = cursor.fetchall()
-    
-    # 2. Fetch Students
-    cursor.execute("SELECT roll_number, name, dept, year, section, status FROM students")
-    students = cursor.fetchall()
+    cursor.execute("SELECT userid, name, role, status, dept, year, section FROM users")
+    users = cursor.fetchall()
     conn.close()
     
     users_list = []
@@ -220,30 +227,32 @@ def get_all_users():
         "details": "All Departments"
     })
     
-    # Add faculties
-    for f in faculties:
-        users_list.append({
-            "user_id": f['username'],
-            "name": f['name'],
-            "role": "faculty",
-            "is_approved": True,
-            "details": f['dept'],
-            "dept": f['dept']
-        })
-        
-    # Add students
-    for s in students:
-        users_list.append({
-            "user_id": s['roll_number'],
-            "name": s['name'],
-            "role": "student",
-            "is_approved": s['status'] == 'approved',
-            "details": f"{s['dept']} ({s['year']} Year - Sec {s['section']})",
-            "dept": s['dept'],
-            "year": s['year'],
-            "section": s['section']
-        })
-        
+    for u in users:
+        if u['userid'] == 'admin':
+            continue
+            
+        role = u['role']
+        if role == 'faculty':
+            users_list.append({
+                "user_id": u['userid'],
+                "name": u['name'],
+                "role": "faculty",
+                "is_approved": True,
+                "details": u['dept'],
+                "dept": u['dept']
+            })
+        elif role == 'student':
+            users_list.append({
+                "user_id": u['userid'],
+                "name": u['name'],
+                "role": "student",
+                "is_approved": u['status'] == 'approved',
+                "details": f"{u['dept']} ({u['year']} Year - Sec {u['section']})",
+                "dept": u['dept'],
+                "year": u['year'],
+                "section": u['section']
+            })
+            
     return jsonify(users_list), 200
 
 @app.route('/api/admin/users/update', methods=['POST'])
@@ -270,12 +279,12 @@ def update_user_api():
             if password:
                 pwd_hash = generate_password_hash(password)
                 cursor.execute(
-                    "UPDATE faculty SET name = %s, dept = %s, password_hash = %s WHERE username = %s",
+                    "UPDATE users SET name = %s, dept = %s, password_hash = %s WHERE userid = %s AND role = 'faculty'",
                     (name, dept, pwd_hash, user_id)
                 )
             else:
                 cursor.execute(
-                    "UPDATE faculty SET name = %s, dept = %s WHERE username = %s",
+                    "UPDATE users SET name = %s, dept = %s WHERE userid = %s AND role = 'faculty'",
                     (name, dept, user_id)
                 )
             conn.commit()
@@ -288,12 +297,12 @@ def update_user_api():
             if password:
                 pwd_hash = generate_password_hash(password)
                 cursor.execute(
-                    "UPDATE students SET name = %s, dept = %s, year = %s, section = %s, password_hash = %s WHERE roll_number = %s",
+                    "UPDATE users SET name = %s, dept = %s, year = %s, section = %s, password_hash = %s WHERE userid = %s AND role = 'student'",
                     (name, dept, year, section, pwd_hash, user_id)
                 )
             else:
                 cursor.execute(
-                    "UPDATE students SET name = %s, dept = %s, year = %s, section = %s WHERE roll_number = %s",
+                    "UPDATE users SET name = %s, dept = %s, year = %s, section = %s WHERE userid = %s AND role = 'student'",
                     (name, dept, year, section, user_id)
                 )
             conn.commit()
@@ -320,7 +329,7 @@ def delete_user_api():
     
     try:
         if role == 'faculty':
-            cursor.execute("DELETE FROM faculty WHERE username = %s", (user_id,))
+            cursor.execute("DELETE FROM users WHERE userid = %s AND role = 'faculty'", (user_id,))
             conn.commit()
             conn.close()
             return jsonify({"message": f"Faculty {user_id} deleted successfully."}), 200
@@ -328,7 +337,7 @@ def delete_user_api():
             # Delete attendance first
             cursor.execute("DELETE FROM attendance WHERE roll_number = %s", (user_id,))
             # Delete student
-            cursor.execute("DELETE FROM students WHERE roll_number = %s", (user_id,))
+            cursor.execute("DELETE FROM users WHERE userid = %s AND role = 'student'", (user_id,))
             conn.commit()
             conn.close()
             return jsonify({"message": f"Student {user_id} deleted successfully."}), 200
@@ -354,13 +363,13 @@ def add_faculty_api():
     cursor = conn.cursor()
     
     # Check if username exists in faculty
-    cursor.execute("SELECT * FROM faculty WHERE username = %s", (username,))
+    cursor.execute("SELECT * FROM users WHERE userid = %s", (username,))
     if cursor.fetchone():
         conn.close()
         return jsonify({"error": "Faculty username already exists"}), 400
         
     try:
-        cursor.execute("INSERT INTO faculty (username, password_hash, name, dept) VALUES (%s, %s, %s, %s)",
+        cursor.execute("INSERT INTO users (userid, password_hash, name, dept, role, status) VALUES (%s, %s, %s, %s, 'faculty', 'approved')",
                        (username, generate_password_hash(password), name, dept))
         conn.commit()
         conn.close()
@@ -376,7 +385,7 @@ def download_master_history():
     cursor.execute("""
         SELECT a.date, a.dept, a.year, a.section, a.roll_number, s.name, a.period, a.status, a.marked_by
         FROM attendance a
-        JOIN students s ON a.roll_number = s.roll_number
+        JOIN users s ON a.roll_number = s.userid
         ORDER BY a.date DESC, a.section ASC, a.roll_number ASC
     """)
     rows = cursor.fetchall()
@@ -405,7 +414,7 @@ def get_roster_students():
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT roll_number, name FROM students WHERE dept = %s AND year = %s AND section = %s AND status = 'approved'", 
+    cursor.execute("SELECT userid as roll_number, name FROM users WHERE dept = %s AND year = %s AND section = %s AND status = 'approved' AND role = 'student'", 
                    (dept, year, section))
     rows = cursor.fetchall()
     conn.close()
@@ -428,7 +437,7 @@ def mark_attendance():
     # Extract username if it's a mock token and resolve to the faculty name
     if marked_by.startswith("mock-faculty-token-"):
         faculty_username = marked_by.replace("mock-faculty-token-", "")
-        cursor.execute("SELECT name FROM faculty WHERE username = %s", (faculty_username,))
+        cursor.execute("SELECT name FROM users WHERE userid = %s AND role = 'faculty'", (faculty_username,))
         row = cursor.fetchone()
         if row:
             marked_by = row['name']
@@ -464,7 +473,7 @@ def get_attendance_report():
     cursor.execute("""
         SELECT a.roll_number, s.name, a.status 
         FROM attendance a
-        JOIN students s ON a.roll_number = s.roll_number
+        JOIN users s ON a.roll_number = s.userid
         WHERE a.date = %s AND a.dept = %s AND a.year = %s AND a.section = %s
     """, (date, dept, year, section))
     
