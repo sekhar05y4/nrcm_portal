@@ -506,29 +506,65 @@ def get_attendance_report():
     year = request.args.get('year')
     section = request.args.get('section')
 
+    if not all([date, dept, year, section]):
+        return jsonify({"error": "Missing parameters"}), 400
+
     conn = get_db_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT a.roll_number, s.name, a.status 
+        SELECT a.roll_number, s.name, a.period, a.status, a.marked_by, a.dept, a.year, a.section
         FROM attendance a
         JOIN users s ON a.roll_number = s.userid
         WHERE a.date = %s AND a.dept = %s AND a.year = %s AND a.section = %s
+        ORDER BY a.roll_number ASC, a.period ASC
     """, (date, dept, year, section))
     
     rows = cursor.fetchall()
     conn.close()
 
-    present_list = []
-    absent_list = []
+    students_map = {}
     for r in rows:
-        student_obj = {"roll_number": r['roll_number'], "name": r['name'], "status": r['status']}
+        roll = r['roll_number']
+        if roll not in students_map:
+            students_map[roll] = {
+                "roll_number": roll,
+                "name": r['name'],
+                "dept": r['dept'],
+                "year": r['year'],
+                "section": r['section'],
+                "present_periods": [],
+                "absent_periods": [],
+                "marked_by_set": set()
+            }
+        
+        p_name = r['period']
+        if p_name.startswith("Period "):
+            p_name = "P" + p_name.replace("Period ", "")
+            
         if r['status'] == 'Present':
-            present_list.append(student_obj)
+            students_map[roll]["present_periods"].append(p_name)
         else:
-            absent_list.append(student_obj)
+            students_map[roll]["absent_periods"].append(p_name)
+            
+        if r['marked_by']:
+            students_map[roll]["marked_by_set"].add(r['marked_by'])
 
-    return jsonify({"present": present_list, "absent": absent_list}), 200
+    students_list = []
+    for roll, info in students_map.items():
+        marked_by_str = ", ".join(sorted(list(info["marked_by_set"])))
+        students_list.append({
+            "roll_number": info["roll_number"],
+            "name": info["name"],
+            "dept": info["dept"],
+            "year": info["year"],
+            "section": info["section"],
+            "present_periods": info["present_periods"],
+            "absent_periods": info["absent_periods"],
+            "marked_by": marked_by_str
+        })
+
+    return jsonify({"students": students_list}), 200
 
 
 @app.route('/api/student/attendance', methods=['GET'])

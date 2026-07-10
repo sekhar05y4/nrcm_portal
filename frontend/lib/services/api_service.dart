@@ -73,7 +73,7 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
-    return {'present': [], 'absent': []};
+    return {'students': []};
   }
 
   static Future<Map<String, dynamic>> getAdminStats() async {
