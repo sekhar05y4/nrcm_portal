@@ -491,6 +491,29 @@ def get_attendance_report():
 
     return jsonify({"present": present_list, "absent": absent_list}), 200
 
+
+@app.route('/api/student/attendance', methods=['GET'])
+def get_student_attendance():
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith("mock-student-token-"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    roll_number = auth_header.replace("mock-student-token-", "")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT date, period, status, marked_by 
+        FROM attendance 
+        WHERE roll_number = %s 
+        ORDER BY date DESC
+    """, (roll_number,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return jsonify([dict(r) for r in rows]), 200
+
+
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
