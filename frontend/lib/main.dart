@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/session_storage.dart';
 import 'screens/login_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/faculty_dashboard_screen.dart';
@@ -8,11 +8,10 @@ import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('token') ?? '';
-  final role = prefs.getString('role') ?? '';
-  final userid = prefs.getString('userid') ?? '';
-  final name = prefs.getString('name') ?? '';
+  final token = await SessionStorage.getString('token') ?? '';
+  final role = await SessionStorage.getString('role') ?? '';
+  final userid = await SessionStorage.getString('userid') ?? '';
+  final name = await SessionStorage.getString('name') ?? '';
 
   String initialRoute = '/login';
   Map<String, dynamic>? initialArgs;

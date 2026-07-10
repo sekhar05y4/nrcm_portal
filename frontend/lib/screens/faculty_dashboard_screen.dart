@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/session_storage.dart';
 import 'manual_attendance_screen.dart';
 import 'attendance_reports_screen.dart';
 
@@ -209,8 +209,7 @@ class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
             : null,
         onTap: () async {
           if (isLogout) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.clear();
+            await SessionStorage.clear();
             Navigator.pushReplacementNamed(context, '/login');
           } else {
             setState(() => _selectedMenu = label);

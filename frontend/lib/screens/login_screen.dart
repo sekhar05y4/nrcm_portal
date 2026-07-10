@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/session_storage.dart';
 import '../services/api_service.dart';
 import 'student_registration_screen.dart';
 
@@ -38,11 +38,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final String token = body['token'] ?? '';
       final String name = body['name'] ?? 'User';
       
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-      await prefs.setString('role', _selectedRole);
-      await prefs.setString('userid', username);
-      await prefs.setString('name', name);
+      await SessionStorage.setString('token', token);
+      await SessionStorage.setString('role', _selectedRole);
+      await SessionStorage.setString('userid', username);
+      await SessionStorage.setString('name', name);
       
       // Update local API service token
       ApiService.token = token;

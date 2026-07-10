@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/session_storage.dart';
 import '../services/api_service.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
@@ -243,8 +243,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             : null,
         onTap: () async {
           if (isLogout) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.clear();
+            await SessionStorage.clear();
             Navigator.pushReplacementNamed(context, '/login');
           } else {
             setState(() => _selectedMenu = label);

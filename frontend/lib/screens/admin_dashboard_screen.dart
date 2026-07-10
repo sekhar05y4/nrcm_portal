@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/session_storage.dart';
 import 'dart:js' as js;
 import '../services/api_service.dart';
 import '../models/student.dart';
@@ -367,8 +367,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             : null,
         onTap: () async {
           if (isLogout) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.clear();
+            await SessionStorage.clear();
             Navigator.pushReplacementNamed(context, '/login');
           } else {
             setState(() => _selectedMenu = label);
