@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'student_registration_screen.dart';
-import 'admin_dashboard_screen.dart';
-import 'faculty_dashboard_screen.dart';
-import 'student_dashboard_screen.dart'; // Verified path configuration link
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -51,40 +48,35 @@ class _LoginScreenState extends State<LoginScreen> {
       ApiService.token = token;
 
       if (_selectedRole == 'Admin') {
-        Navigator.pushReplacement(
+        Navigator.pushReplacementNamed(
           context,
-          MaterialPageRoute(
-            builder: (_) => AdminDashboardScreen(
-              rollNumber: username.isNotEmpty ? username : 'ADMIN',
-              studentName: name,
-            ),
-          ),
+          '/adminlogin',
+          arguments: {
+            'rollNumber': username.isNotEmpty ? username : 'ADMIN',
+            'studentName': name,
+          },
         );
       } else if (_selectedRole == 'Faculty') {
-        Navigator.pushReplacement(
+        Navigator.pushReplacementNamed(
           context,
-          MaterialPageRoute(
-            builder: (_) => FacultyDashboardScreen(
-              rollNumber: username.isNotEmpty ? username : 'FACULTY',
-              studentName: name,
-            ),
-          ),
+          '/facultylogin',
+          arguments: {
+            'rollNumber': username.isNotEmpty ? username : 'FACULTY',
+            'studentName': name,
+          },
         );
       } else {
-        // Safe extraction variables
         final String studentName = (response['body'] != null && response['body']['name'] != null)
             ? response['body']['name']
-            : 'SEKHAR'; // Fallback to handle mock profile assertions smoothly
+            : 'SEKHAR';
 
-        // Forces a clean screen replacement route directly to dashboard
-        Navigator.pushReplacement(
+        Navigator.pushReplacementNamed(
           context,
-          MaterialPageRoute(
-            builder: (_) => StudentDashboardScreen(
-              studentName: studentName,
-              rollNumber: username.isNotEmpty ? username.toUpperCase() : "24X01A05Y4",
-            ),
-          ),
+          '/studentlogin',
+          arguments: {
+            'rollNumber': username.isNotEmpty ? username.toUpperCase() : "24X01A05Y4",
+            'studentName': studentName,
+          },
         );
       }
     } else {

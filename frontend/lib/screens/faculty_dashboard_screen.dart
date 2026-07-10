@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login_screen.dart';
 import 'manual_attendance_screen.dart';
 import 'attendance_reports_screen.dart';
 
@@ -212,7 +211,7 @@ class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
           if (isLogout) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.clear();
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            Navigator.pushReplacementNamed(context, '/login');
           } else {
             setState(() => _selectedMenu = label);
           }

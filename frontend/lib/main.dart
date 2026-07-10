@@ -14,25 +14,28 @@ void main() async {
   final userid = prefs.getString('userid') ?? '';
   final name = prefs.getString('name') ?? '';
 
-  Widget homeWidget = const LoginScreen();
+  String initialRoute = '/login';
+  Map<String, dynamic>? initialArgs;
 
   if (token.isNotEmpty && role.isNotEmpty && userid.isNotEmpty) {
     ApiService.token = token;
+    initialArgs = {'rollNumber': userid, 'studentName': name};
     if (role == 'Admin') {
-      homeWidget = AdminDashboardScreen(rollNumber: userid, studentName: name);
+      initialRoute = '/adminlogin';
     } else if (role == 'Faculty') {
-      homeWidget = FacultyDashboardScreen(rollNumber: userid, studentName: name);
+      initialRoute = '/facultylogin';
     } else if (role == 'Student/Parent') {
-      homeWidget = StudentDashboardScreen(rollNumber: userid, studentName: name);
+      initialRoute = '/studentlogin';
     }
   }
 
-  runApp(NRCMApp(homeWidget: homeWidget));
+  runApp(NRCMApp(initialRoute: initialRoute, initialArgs: initialArgs));
 }
 
 class NRCMApp extends StatelessWidget {
-  final Widget homeWidget;
-  const NRCMApp({Key? key, required this.homeWidget}) : super(key: key);
+  final String initialRoute;
+  final Map<String, dynamic>? initialArgs;
+  const NRCMApp({Key? key, required this.initialRoute, this.initialArgs}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +50,67 @@ class NRCMApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: homeWidget,
+      initialRoute: initialRoute,
+      onGenerateRoute: (settings) {
+        final name = settings.name;
+
+        if (name == '/adminlogin') {
+          final args = (settings.arguments as Map<String, dynamic>?) ?? initialArgs;
+          if (args == null || ApiService.token.isEmpty) {
+            return MaterialPageRoute(
+              builder: (_) => const LoginScreen(),
+              settings: const RouteSettings(name: '/login'),
+            );
+          }
+          return MaterialPageRoute(
+            builder: (_) => AdminDashboardScreen(
+              rollNumber: args['rollNumber'] ?? 'ADMIN',
+              studentName: args['studentName'] ?? 'Admin User',
+            ),
+            settings: settings,
+          );
+        }
+
+        if (name == '/facultylogin') {
+          final args = (settings.arguments as Map<String, dynamic>?) ?? initialArgs;
+          if (args == null || ApiService.token.isEmpty) {
+            return MaterialPageRoute(
+              builder: (_) => const LoginScreen(),
+              settings: const RouteSettings(name: '/login'),
+            );
+          }
+          return MaterialPageRoute(
+            builder: (_) => FacultyDashboardScreen(
+              rollNumber: args['rollNumber'] ?? 'FACULTY',
+              studentName: args['studentName'] ?? 'Faculty Member',
+            ),
+            settings: settings,
+          );
+        }
+
+        if (name == '/studentlogin') {
+          final args = (settings.arguments as Map<String, dynamic>?) ?? initialArgs;
+          if (args == null || ApiService.token.isEmpty) {
+            return MaterialPageRoute(
+              builder: (_) => const LoginScreen(),
+              settings: const RouteSettings(name: '/login'),
+            );
+          }
+          return MaterialPageRoute(
+            builder: (_) => StudentDashboardScreen(
+              rollNumber: args['rollNumber'] ?? 'STUDENT',
+              studentName: args['studentName'] ?? 'Student Name',
+            ),
+            settings: settings,
+          );
+        }
+
+        // Default fallback to login
+        return MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+          settings: const RouteSettings(name: '/login'),
+        );
+      },
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:js' as js;
-import 'login_screen.dart';
 import '../services/api_service.dart';
 import '../models/student.dart';
 
@@ -370,7 +369,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           if (isLogout) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.clear();
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            Navigator.pushReplacementNamed(context, '/login');
           } else {
             setState(() => _selectedMenu = label);
           }

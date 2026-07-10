@@ -137,4 +137,20 @@ class ApiService {
       return {'statusCode': 500, 'body': {'error': e.toString()}};
     }
   }
+
+  static Future<List<Map<String, dynamic>>> getStudentAttendance() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/student/attendance'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+      );
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+    } catch (_) {}
+    return [];
+  }
 }

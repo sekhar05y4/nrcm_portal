@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'login_screen.dart';
+import '../services/api_service.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   final String studentName;
@@ -21,6 +21,45 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   bool _isSidebarExpanded = true; 
 
   final Color primaryMaroon = const Color(0xff5A1827);
+
+  List<Map<String, dynamic>> _attendanceRecords = [];
+  bool _isLoading = true;
+  String _todayStatus = 'Absent';
+  String _todayPeriod = '';
+  String _todayMarkedBy = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAttendance();
+  }
+
+  void _loadAttendance() async {
+    setState(() { _isLoading = true; });
+    final records = await ApiService.getStudentAttendance();
+    
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    String status = 'Absent';
+    String period = '';
+    String markedBy = '';
+    
+    for (var r in records) {
+      if (r['date'] == todayStr) {
+        status = r['status'] ?? 'Absent';
+        period = r['period'] ?? '';
+        markedBy = r['marked_by'] ?? '';
+        break;
+      }
+    }
+    
+    setState(() {
+      _attendanceRecords = records;
+      _todayStatus = status;
+      _todayPeriod = period;
+      _todayMarkedBy = markedBy;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +245,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           if (isLogout) {
             final prefs = await SharedPreferences.getInstance();
             await prefs.clear();
-            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            Navigator.pushReplacementNamed(context, '/login');
           } else {
             setState(() => _selectedMenu = label);
           }
@@ -245,6 +284,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Widget _buildDashboardContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final isPresentToday = _todayStatus == 'Present';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -273,14 +323,30 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 Text("Today's Status", style: TextStyle(fontSize: 13, color: Colors.grey.shade500, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Row(
-                  children: const [
-                    Icon(Icons.cancel, color: Colors.red, size: 24),
-                    SizedBox(width: 8),
-                    Text("Absent", style: TextStyle(color: Colors.red, fontSize: 22, fontWeight: FontWeight.bold)),
+                  children: [
+                    Icon(
+                      isPresentToday ? Icons.check_circle : Icons.cancel, 
+                      color: isPresentToday ? Colors.green : Colors.red, 
+                      size: 24
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _todayStatus, 
+                      style: TextStyle(
+                        color: isPresentToday ? Colors.green : Colors.red, 
+                        fontSize: 22, 
+                        fontWeight: FontWeight.bold
+                      )
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text("Not recognized yet today", style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+                Text(
+                  isPresentToday 
+                      ? "Marked by $_todayMarkedBy for $_todayPeriod" 
+                      : "Not recognized yet today", 
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400)
+                ),
               ],
             ),
           ),
@@ -309,23 +375,44 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       _th("Date"), _th("Period"), _th("Status")
                     ]
                   ),
-                  TableRow(
-                    children: [
-                      _td("2026-07-09"),
-                      _td("None"),
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(4)),
-                            child: const Text("Marked", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
+                  if (_attendanceRecords.isEmpty)
+                    TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text("No records found", style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
                         ),
-                      )
-                    ]
-                  )
+                        const SizedBox(),
+                        const SizedBox(),
+                      ]
+                    )
+                  else
+                    ..._attendanceRecords.map((r) {
+                      final bool isPres = r['status'] == 'Present';
+                      return TableRow(
+                        children: [
+                          _td(r['date'] ?? ''),
+                          _td(r['period'] ?? ''),
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isPres ? Colors.green.shade600 : Colors.red.shade600, 
+                                  borderRadius: BorderRadius.circular(4)
+                                ),
+                                child: Text(
+                                  isPres ? "Present" : "Absent", 
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)
+                                ),
+                              ),
+                            ),
+                          )
+                        ]
+                      );
+                    }).toList()
                 ],
               )
             ],
