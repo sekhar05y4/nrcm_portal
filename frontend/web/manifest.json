@@ -1,7 +1,8 @@
 {
-    "name": "frontend",
-    "short_name": "frontend",
-    "start_url": ".",
+    "name": "NRCM Portal",
+    "short_name": "NRCM Portal",
+    "start_url": "/nrcm_portal/",
+    "scope": "/nrcm_portal/",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
