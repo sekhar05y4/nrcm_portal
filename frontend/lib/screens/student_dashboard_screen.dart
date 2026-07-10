@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
@@ -201,8 +202,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         trailing: (_isSidebarExpanded && hasArrow && !isLogout)
             ? Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400)
             : null,
-        onTap: () {
+        onTap: () async {
           if (isLogout) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.clear();
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
           } else {
             setState(() => _selectedMenu = label);

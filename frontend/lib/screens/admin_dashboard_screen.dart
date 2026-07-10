@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:js' as js;
 import 'login_screen.dart';
 import '../services/api_service.dart';
@@ -365,8 +366,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         trailing: (_isSidebarExpanded && hasArrow && !isLogout)
             ? Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400)
             : null,
-        onTap: () {
+        onTap: () async {
           if (isLogout) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.clear();
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
           } else {
             setState(() => _selectedMenu = label);

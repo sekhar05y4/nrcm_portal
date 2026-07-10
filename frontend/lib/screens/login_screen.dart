@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'student_registration_screen.dart';
 import 'admin_dashboard_screen.dart';
@@ -36,10 +37,39 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _isLoading = false; });
 
     if (response['statusCode'] == 200) {
+      final body = response['body'] ?? {};
+      final String token = body['token'] ?? '';
+      final String name = body['name'] ?? 'User';
+      
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', token);
+      await prefs.setString('role', _selectedRole);
+      await prefs.setString('userid', username);
+      await prefs.setString('name', name);
+      
+      // Update local API service token
+      ApiService.token = token;
+
       if (_selectedRole == 'Admin') {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminDashboardScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminDashboardScreen(
+              rollNumber: username.isNotEmpty ? username : 'ADMIN',
+              studentName: name,
+            ),
+          ),
+        );
       } else if (_selectedRole == 'Faculty') {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FacultyDashboardScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FacultyDashboardScreen(
+              rollNumber: username.isNotEmpty ? username : 'FACULTY',
+              studentName: name,
+            ),
+          ),
+        );
       } else {
         // Safe extraction variables
         final String studentName = (response['body'] != null && response['body']['name'] != null)
