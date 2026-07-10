@@ -424,6 +424,16 @@ def mark_attendance():
 
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    # Extract username if it's a mock token and resolve to the faculty name
+    if marked_by.startswith("mock-faculty-token-"):
+        faculty_username = marked_by.replace("mock-faculty-token-", "")
+        cursor.execute("SELECT name FROM faculty WHERE username = %s", (faculty_username,))
+        row = cursor.fetchone()
+        if row:
+            marked_by = row['name']
+        else:
+            marked_by = faculty_username
     
     for student in records:
         # Clear duplicate attendance entry for same period if accidentally re-submitted
