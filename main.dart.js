@@ -27727,7 +27727,7 @@ az7:function az7(a,b){this.a=a
 this.b=b},
 a3y(a,b,c){var s=0,r=A.O(t.a),q,p,o,n,m,l
 var $async$a3y=A.P(function(d,e){if(d===1)return A.L(e,r)
-for(;;)switch(s){case 0:p=A.dJ("http://127.0.0.1:5000/api/login")
+for(;;)switch(s){case 0:p=A.dJ("https://nrcm-portal.onrender.com/api/login")
 o=t.N
 n=A.af(["Content-Type","application/json"],o,o)
 s=3
@@ -27743,7 +27743,7 @@ case 1:return A.M(q,r)}})
 return A.N($async$a3y,r)},
 a3z(a){var s=0,r=A.O(t.a),q,p,o,n,m
 var $async$a3z=A.P(function(b,c){if(b===1)return A.L(c,r)
-for(;;)switch(s){case 0:p=A.dJ("http://127.0.0.1:5000/api/student/register")
+for(;;)switch(s){case 0:p=A.dJ("https://nrcm-portal.onrender.com/api/student/register")
 o=t.N
 n=A.af(["Content-Type","application/json"],o,o)
 s=3
@@ -27757,7 +27757,7 @@ return A.N($async$a3z,r)},
 a3s(){var s=0,r=A.O(t.Pa),q,p,o
 var $async$a3s=A.P(function(a,b){if(a===1)return A.L(b,r)
 for(;;)switch(s){case 0:s=3
-return A.J(A.Kf(A.dJ("http://127.0.0.1:5000/api/admin/pending"),null),$async$a3s)
+return A.J(A.Kf(A.dJ("https://nrcm-portal.onrender.com/api/admin/pending"),null),$async$a3s)
 case 3:o=b
 if(o.b===200){p=J.jd(B.aC.kY(0,A.pw(A.pq(o.e)).dP(0,o.w),null),new A.a3t(),t.Uz)
 p=A.Z(p,p.$ti.i("am.E"))
@@ -27770,7 +27770,7 @@ case 1:return A.M(q,r)}})
 return A.N($async$a3s,r)},
 a3x(a,b){var s=0,r=A.O(t.y),q,p,o,n
 var $async$a3x=A.P(function(c,d){if(c===1)return A.L(d,r)
-for(;;)switch(s){case 0:p=A.dJ("http://127.0.0.1:5000/api/admin/"+(b?"approve":"reject"))
+for(;;)switch(s){case 0:p=A.dJ("https://nrcm-portal.onrender.com/api/admin/"+(b?"approve":"reject"))
 o=t.N
 n=A.af(["Content-Type","application/json"],o,o)
 s=3
@@ -27783,7 +27783,7 @@ return A.N($async$a3x,r)},
 a3v(a,b,c){var s=0,r=A.O(t.b5),q,p
 var $async$a3v=A.P(function(d,e){if(d===1)return A.L(e,r)
 for(;;)switch(s){case 0:s=3
-return A.J(A.Kf(A.dJ("http://127.0.0.1:5000/api/faculty/students?dept="+a+"&year="+b+"&section="+c),null),$async$a3v)
+return A.J(A.Kf(A.dJ("https://nrcm-portal.onrender.com/api/faculty/students?dept="+a+"&year="+b+"&section="+c),null),$async$a3v)
 case 3:p=e
 if(p.b===200){q=A.fV(B.aC.kY(0,A.pw(A.pq(p.e)).dP(0,p.w),null),!0,t.a)
 s=1
@@ -27794,7 +27794,7 @@ case 1:return A.M(q,r)}})
 return A.N($async$a3v,r)},
 a3A(a){var s=0,r=A.O(t.y),q,p,o
 var $async$a3A=A.P(function(b,c){if(b===1)return A.L(c,r)
-for(;;)switch(s){case 0:p=A.dJ("http://127.0.0.1:5000/api/faculty/attendance/mark")
+for(;;)switch(s){case 0:p=A.dJ("https://nrcm-portal.onrender.com/api/faculty/attendance/mark")
 o=t.N
 o=A.af(["Content-Type","application/json","Authorization",$.pL],o,o)
 s=3
@@ -27807,7 +27807,7 @@ return A.N($async$a3A,r)},
 a3u(a,b,c,d){var s=0,r=A.O(t.a),q,p
 var $async$a3u=A.P(function(e,f){if(e===1)return A.L(f,r)
 for(;;)switch(s){case 0:s=3
-return A.J(A.Kf(A.dJ("http://127.0.0.1:5000/api/faculty/attendance/report?date="+a+"&dept="+b+"&year="+c+"&section="+d),null),$async$a3u)
+return A.J(A.Kf(A.dJ("https://nrcm-portal.onrender.com/api/faculty/attendance/report?date="+a+"&dept="+b+"&year="+c+"&section="+d),null),$async$a3u)
 case 3:p=f
 if(p.b===200){q=B.aC.kY(0,A.pw(A.pq(p.e)).dP(0,p.w),null)
 s=1
@@ -27820,7 +27820,7 @@ a3q(){var s=0,r=A.O(t.a),q,p=2,o=[],n,m,l,k
 var $async$a3q=A.P(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:p=4
 s=7
-return A.J(A.Kf(A.dJ("http://127.0.0.1:5000/api/admin/stats"),null),$async$a3q)
+return A.J(A.Kf(A.dJ("https://nrcm-portal.onrender.com/api/admin/stats"),null),$async$a3q)
 case 7:n=b
 if(n.b===200){m=n
 m=B.aC.kY(0,A.pw(A.pq(m.e)).dP(0,m.w),null)
@@ -27845,7 +27845,7 @@ a3r(){var s=0,r=A.O(t.b5),q,p=2,o=[],n,m,l,k
 var $async$a3r=A.P(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:p=4
 s=7
-return A.J(A.Kf(A.dJ("http://127.0.0.1:5000/api/admin/users"),null),$async$a3r)
+return A.J(A.Kf(A.dJ("https://nrcm-portal.onrender.com/api/admin/users"),null),$async$a3r)
 case 7:n=b
 if(n.b===200){m=n
 m=A.fV(B.aC.kY(0,A.pw(A.pq(m.e)).dP(0,m.w),null),!0,t.a)
@@ -27870,7 +27870,7 @@ a3p(a,b){return A.aS_(a,b)},
 aS_(a,b){var s=0,r=A.O(t.y),q,p=2,o=[],n,m,l,k,j,i
 var $async$a3p=A.P(function(c,d){if(c===1){o.push(d)
 s=p}for(;;)switch(s){case 0:p=4
-m=A.dJ("http://127.0.0.1:5000/api/admin/users/delete")
+m=A.dJ("https://nrcm-portal.onrender.com/api/admin/users/delete")
 l=t.N
 k=A.af(["Content-Type","application/json"],l,l)
 s=7
@@ -27899,7 +27899,7 @@ a3B(a){return A.aS0(a)},
 aS0(a){var s=0,r=A.O(t.y),q,p=2,o=[],n,m,l,k,j
 var $async$a3B=A.P(function(b,c){if(b===1){o.push(c)
 s=p}for(;;)switch(s){case 0:p=4
-m=A.dJ("http://127.0.0.1:5000/api/admin/users/update")
+m=A.dJ("https://nrcm-portal.onrender.com/api/admin/users/update")
 l=t.N
 l=A.af(["Content-Type","application/json"],l,l)
 s=7
@@ -27928,7 +27928,7 @@ a3o(a,b,c,d){return A.aRZ(a,b,c,d)},
 aRZ(a,b,c,d){var s=0,r=A.O(t.a),q,p=2,o=[],n,m,l,k,j,i,h
 var $async$a3o=A.P(function(e,f){if(e===1){o.push(f)
 s=p}for(;;)switch(s){case 0:p=4
-l=A.dJ("http://127.0.0.1:5000/api/admin/faculty/add")
+l=A.dJ("https://nrcm-portal.onrender.com/api/admin/faculty/add")
 k=t.N
 j=A.af(["Content-Type","application/json"],k,k)
 s=7
@@ -27962,7 +27962,7 @@ var $async$a3w=A.P(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:p=4
 m=t.N
 s=7
-return A.J(A.Kf(A.dJ("http://127.0.0.1:5000/api/student/attendance"),A.af(["Content-Type","application/json","Authorization",$.pL],m,m)),$async$a3w)
+return A.J(A.Kf(A.dJ("https://nrcm-portal.onrender.com/api/student/attendance"),A.af(["Content-Type","application/json","Authorization",$.pL],m,m)),$async$a3w)
 case 7:n=b
 if(n.b===200){m=n
 m=A.fV(B.aC.kY(0,A.pw(A.pq(m.e)).dP(0,m.w),null),!0,t.a)
@@ -94506,7 +94506,7 @@ s=h==null?i:J.cW(h)
 if(s==null)s="0"
 h=A.bY(8)
 r=t.p
-h=A.jj(new A.aK(B.bV,A.bI(A.b([A.c7(A.b([A.db(B.IR,B.fh,i,i),B.dT,B.ZR],r),B.A,B.n,B.q,0,i),B.kL,j.Uy("Database Connection","Online",B.aV,!0),j.HS("API Server Address","http://127.0.0.1:5000/api",!1),j.HS("Student Roster Size",g,!1),j.HS("Attendance Log Entries",s,!1)],r),B.K,B.n,B.q),i),B.h,0,i,new A.bX(h,new A.ap(B.aw,1.5,B.o,-1)))
+h=A.jj(new A.aK(B.bV,A.bI(A.b([A.c7(A.b([A.db(B.IR,B.fh,i,i),B.dT,B.ZR],r),B.A,B.n,B.q,0,i),B.kL,j.Uy("Database Connection","Online",B.aV,!0),j.HS("API Server Address","https://nrcm-portal.onrender.com/api",!1),j.HS("Student Roster Size",g,!1),j.HS("Attendance Log Entries",s,!1)],r),B.K,B.n,B.q),i),B.h,0,i,new A.bX(h,new A.ap(B.aw,1.5,B.o,-1)))
 q=A.bY(8)
 q=A.cu(A.bI(A.b([h,B.d8,A.jj(new A.aK(B.bV,A.bI(A.b([B.RN,B.kL,B.a_m,B.d8,A.a8c(B.Js,B.ZJ,new A.aoe(),A.jq(i,i,B.F,i,i,i,i,i,i,B.h,i,B.TT,i,i,new A.bX(A.bY(6),B.l),i,i,i,i,i))],r),B.K,B.n,B.q),i),B.h,0,i,new A.bX(q,new A.ap(B.aw,1.5,B.o,-1)))],r),B.K,B.n,B.q),1)
 h=A.bY(8)
@@ -94785,7 +94785,7 @@ A.aoU.prototype={
 $0(){this.a.r=!1},
 $S:0}
 A.aoe.prototype={
-$0(){$.aH0().vI("open",["http://127.0.0.1:5000/api/admin/download/master","_blank"])},
+$0(){$.aH0().vI("open",["https://nrcm-portal.onrender.com/api/admin/download/master","_blank"])},
 $S:0}
 A.aof.prototype={
 $1(a){return a==null||B.c.eS(a).length===0?"Faculty ID is required":null},
@@ -94872,7 +94872,7 @@ $S:0}
 A.apx.prototype={
 $0(){var s=$.aH0(),r=this.a,q=r.d
 r=r.a
-s.vI("open",["http://127.0.0.1:5000/api/faculty/download/report?date="+q+"&dept="+r.c+"&year="+r.d+"&section="+r.e,"_blank"])},
+s.vI("open",["https://nrcm-portal.onrender.com/api/faculty/download/report?date="+q+"&dept="+r.c+"&year="+r.d+"&section="+r.e,"_blank"])},
 $S:0}
 A.aps.prototype={
 $1(a){var s,r,q,p,o,n,m,l,k,j=a.b,i=J.aw(j),h=i.h(j,"present_periods")
