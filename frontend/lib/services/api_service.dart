@@ -4,7 +4,7 @@ import '../models/student.dart';
 
 class ApiService {
   // Update to point to your hosted/local engine address.
-  static const String baseUrl = "http://127.0.0.1:5000/api";
+  static const String baseUrl = 'https://nrcm-portal.onrender.com/api';
   static String token = "";
 
   static Future<Map<String, dynamic>> login(String username, String password, String role) async {
