@@ -224,7 +224,8 @@ def get_all_users():
             "name": f['name'],
             "role": "faculty",
             "is_approved": True,
-            "details": f['dept']
+            "details": f['dept'],
+            "dept": f['dept']
         })
         
     # Add students
@@ -234,10 +235,73 @@ def get_all_users():
             "name": s['name'],
             "role": "student",
             "is_approved": s['status'] == 'approved',
-            "details": f"{s['dept']} ({s['year']} Year - Sec {s['section']})"
+            "details": f"{s['dept']} ({s['year']} Year - Sec {s['section']})",
+            "dept": s['dept'],
+            "year": s['year'],
+            "section": s['section']
         })
         
     return jsonify(users_list), 200
+
+@app.route('/api/admin/users/update', methods=['POST'])
+def update_user_api():
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
+    role = data.get('role')
+    name = data.get('name')
+    dept = data.get('dept')
+    password = data.get('password') # Optional
+
+    # For student only
+    year = data.get('year')
+    section = data.get('section')
+
+    if not user_id or not role or not name:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        if role == 'faculty':
+            if password:
+                pwd_hash = generate_password_hash(password)
+                cursor.execute(
+                    "UPDATE faculty SET name = ?, dept = ?, password_hash = ? WHERE username = ?",
+                    (name, dept, pwd_hash, user_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE faculty SET name = ?, dept = ? WHERE username = ?",
+                    (name, dept, user_id)
+                )
+            conn.commit()
+            return jsonify({"message": f"Faculty {user_id} updated successfully."}), 200
+
+        elif role == 'student':
+            if not year or not section or not dept:
+                return jsonify({"error": "Missing student details (dept, year, section)"}), 400
+            
+            if password:
+                pwd_hash = generate_password_hash(password)
+                cursor.execute(
+                    "UPDATE students SET name = ?, dept = ?, year = ?, section = ?, password_hash = ? WHERE roll_number = ?",
+                    (name, dept, year, section, pwd_hash, user_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE students SET name = ?, dept = ?, year = ?, section = ? WHERE roll_number = ?",
+                    (name, dept, year, section, user_id)
+                )
+            conn.commit()
+            return jsonify({"message": f"Student {user_id} updated successfully."}), 200
+
+        else:
+            return jsonify({"error": "Invalid role or cannot edit admin user"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 
 @app.route('/api/admin/users/delete', methods=['POST'])
 def delete_user_api():

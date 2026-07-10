@@ -108,6 +108,18 @@ class ApiService {
     return false;
   }
 
+  static Future<bool> updateUser(Map<String, dynamic> payload) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admin/users/update'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      );
+      return response.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
   static Future<Map<String, dynamic>> addFaculty(String username, String name, String password, String dept) async {
     try {
       final response = await http.post(

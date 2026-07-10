@@ -628,10 +628,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   DataCell(
                                     role == 'admin'
                                         ? const SizedBox()
-                                        : IconButton(
-                                            icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                            onPressed: () => _confirmDelete(userId, role),
-                                            tooltip: "Delete Account",
+                                        : Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.edit_outlined, color: Colors.blue),
+                                                onPressed: () => _showEditDialog(u),
+                                                tooltip: "Edit Account",
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                                onPressed: () => _confirmDelete(userId, role),
+                                                tooltip: "Delete Account",
+                                              ),
+                                            ],
                                           ),
                                   ),
                                 ]);
@@ -670,6 +680,197 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         );
       },
     );
+  }
+
+  void _showEditDialog(Map<String, dynamic> user) {
+    final String userId = user['user_id'] ?? '';
+    final String role = user['role'] ?? 'student';
+    final String name = user['name'] ?? '';
+    final String dept = user['dept'] ?? 'CSE';
+    final String year = user['year'] ?? 'I';
+    final String section = user['section'] ?? 'A';
+
+    final nameController = TextEditingController(text: name);
+    final passwordController = TextEditingController();
+    String selectedDept = dept;
+    String selectedYear = year;
+    String selectedSection = section;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text("Edit ${role == 'faculty' ? 'Faculty' : 'Student'} Account"),
+              content: SingleChildScrollView(
+                child: SizedBox(
+                  width: 400,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        decoration: InputDecoration(
+                          labelText: role == 'faculty' ? "Faculty ID" : "Roll Number",
+                          border: const OutlineInputBorder(),
+                        ),
+                        controller: TextEditingController(text: userId),
+                        readOnly: true,
+                        enabled: false,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: "Full Name",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: "New Password (Optional)",
+                          hintText: "Leave blank to keep unchanged",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: selectedDept,
+                        decoration: const InputDecoration(
+                          labelText: "Department",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ['CSE', 'ECE', 'EEE', 'MECH', 'CIVIL']
+                            .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setStateDialog(() => selectedDept = val);
+                          }
+                        },
+                      ),
+                      if (role == 'student') ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedYear,
+                          decoration: const InputDecoration(
+                            labelText: "Year",
+                            border: OutlineInputBorder(),
+                          ),
+                          items: ['I', 'II', 'III', 'IV']
+                              .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setStateDialog(() => selectedYear = val);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: selectedSection,
+                          decoration: const InputDecoration(
+                            labelText: "Section",
+                            border: OutlineInputBorder(),
+                          ),
+                          items: ['A', 'B', 'C']
+                              .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setStateDialog(() => selectedSection = val);
+                            }
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: primaryMaroon),
+                  onPressed: () {
+                    final updatedName = nameController.text.trim();
+                    if (updatedName.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Name cannot be empty"), backgroundColor: Colors.red),
+                      );
+                      return;
+                    }
+                    if (passwordController.text.isNotEmpty && passwordController.text.length < 6) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Password must be at least 6 characters"), backgroundColor: Colors.red),
+                      );
+                      return;
+                    }
+                    Navigator.of(ctx).pop();
+                    _updateUser(
+                      userId: userId,
+                      role: role,
+                      name: updatedName,
+                      dept: selectedDept,
+                      year: selectedYear,
+                      section: selectedSection,
+                      password: passwordController.text,
+                    );
+                  },
+                  child: const Text("Save", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _updateUser({
+    required String userId,
+    required String role,
+    required String name,
+    required String dept,
+    required String year,
+    required String section,
+    required String password,
+  }) async {
+    setState(() { _isLoading = true; });
+    try {
+      final payload = {
+        'user_id': userId,
+        'role': role,
+        'name': name,
+        'dept': dept,
+      };
+      if (role == 'student') {
+        payload['year'] = year;
+        payload['section'] = section;
+      }
+      if (password.isNotEmpty) {
+        payload['password'] = password;
+      }
+
+      bool success = await ApiService.updateUser(payload);
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User updated successfully"), backgroundColor: Colors.green),
+        );
+        _fetchAllUsers();
+        _fetchAdminStats();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to update user"), backgroundColor: Colors.red),
+        );
+      }
+    } catch (_) {}
+    setState(() { _isLoading = false; });
   }
 
   Widget _buildSystemSettingsContent() {
