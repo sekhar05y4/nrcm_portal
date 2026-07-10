@@ -73,13 +73,42 @@ def init_db():
         cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept, year, section, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                        ('24X01A05AT', 'Mahadev', generate_password_hash('student123'), 'student', 'CSE', 'III', 'B', 'approved'))
                        
-    # Seed attendance row for Mahadev if empty
-    cursor.execute("SELECT * FROM attendance WHERE roll_number = '24X01A05AT'")
-    if not cursor.fetchone():
-        cursor.execute(
-            "INSERT INTO attendance (roll_number, date, period, dept, year, section, status, marked_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            ('24X01A05AT', '2026-07-10', 'Period 1', 'CSE', 'III', 'B', 'Present', 'Dr. Satish Kumar')
-        )
+    # Seed attendance rows for Mahadev if empty or not fully seeded
+    cursor.execute("SELECT COUNT(*) as count FROM attendance WHERE roll_number = '24X01A05AT'")
+    current_count = cursor.fetchone()['count']
+    if current_count < 150:
+        cursor.execute("DELETE FROM attendance WHERE roll_number = '24X01A05AT'")
+        
+        # 1. Seed June 2026 (18 days, 108 classes, 8 present, 100 absent)
+        june_days = []
+        for d in range(1, 31):
+            if d in [7, 14, 21, 28]: # Sundays
+                continue
+            june_days.append(d)
+            if len(june_days) == 18:
+                break
+                
+        class_idx = 0
+        for d in june_days:
+            date_str = f"2026-06-{d:02d}"
+            for p in range(1, 7):
+                status = "Present" if class_idx < 8 else "Absent"
+                cursor.execute(
+                    "INSERT INTO attendance (roll_number, date, period, dept, year, section, status, marked_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    ('24X01A05AT', date_str, f"Period {p}", 'CSE', 'III', 'B', status, 'Dr. Satish Kumar')
+                )
+                class_idx += 1
+
+        # 2. Seed July 2026 (8 days, 48 classes, 47 present, 1 absent)
+        july_days = [1, 2, 3, 4, 6, 7, 8, 9] # excluding Sunday 5
+        for d in july_days:
+            date_str = f"2026-07-{d:02d}"
+            for p in range(1, 7):
+                status = "Absent" if (d == 3 and p == 1) else "Present"
+                cursor.execute(
+                    "INSERT INTO attendance (roll_number, date, period, dept, year, section, status, marked_by) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    ('24X01A05AT', date_str, f"Period {p}", 'CSE', 'III', 'B', status, 'Dr. Satish Kumar')
+                )
     
     conn.commit()
     conn.close()
@@ -403,6 +432,43 @@ def download_master_history():
         output.getvalue(),
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=Master_Attendance_Report.csv"}
+    )
+
+
+@app.route('/api/faculty/download/report', methods=['GET'])
+def download_faculty_report():
+    date = request.args.get('date')
+    dept = request.args.get('dept')
+    year = request.args.get('year')
+    section = request.args.get('section')
+    
+    if not all([date, dept, year, section]):
+        return jsonify({"error": "Missing parameters"}), 400
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.roll_number, s.name, a.status 
+        FROM attendance a
+        JOIN users s ON a.roll_number = s.userid
+        WHERE a.date = %s AND a.dept = %s AND a.year = %s AND a.section = %s
+        ORDER BY a.roll_number ASC
+    """, (date, dept, year, section))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Roll Number', 'Student Name', 'Status'])
+    for r in rows:
+        writer.writerow([r['roll_number'], r['name'], r['status']])
+        
+    output.seek(0)
+    filename = f"Attendance_Report_{dept}_{year}_{section}_{date}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": f"attachment; filename={filename}"}
     )
 
 

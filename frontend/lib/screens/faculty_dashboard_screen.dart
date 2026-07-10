@@ -33,7 +33,7 @@ class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
   final List<String> _periods = ['Period 1', 'Period 2', 'Period 3', 'Period 4', 'Period 5', 'Period 6'];
   final List<String> _departments = ['CSE', 'ECE', 'EEE', 'MECH', 'CIVIL'];
   final List<String> _years = ['I', 'II', 'III', 'IV'];
-  final List<String> _sections = ['A', 'B', 'C'];
+  final List<String> _sections = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
   @override
   Widget build(BuildContext context) {

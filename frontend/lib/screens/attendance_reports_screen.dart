@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:js' as js;
 import '../services/api_service.dart';
 
 class AttendanceReportsScreen extends StatefulWidget {
@@ -71,7 +72,22 @@ class _AttendanceReportsScreenState extends State<AttendanceReportsScreen> {
                       }
                     },
                     child: const Text("Change Date"),
-                  )
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      js.context.callMethod('open', [
+                        '${ApiService.baseUrl}/faculty/download/report?date=$_dateStr&dept=${widget.dept}&year=${widget.year}&section=${widget.section}',
+                        '_blank'
+                      ]);
+                    },
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text("Download CSV"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff7A0C2E),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -93,7 +93,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                 DropdownButtonFormField<String>(
                   value: _sec,
                   decoration: const InputDecoration(labelText: "Section", border: OutlineInputBorder()),
-                  items: ['A', 'B', 'C'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  items: ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                   onChanged: (v) => setState(() => _sec = v!),
                 ),
                 const SizedBox(height: 24),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../utils/session_storage.dart';
 import '../services/api_service.dart';
 
@@ -19,6 +20,7 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String _selectedMenu = 'Dashboard';
   bool _isSidebarExpanded = true; 
+  bool _isAcademicsExpanded = true;
 
   final Color primaryMaroon = const Color(0xff5A1827);
 
@@ -27,6 +29,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String _todayStatus = 'Absent';
   String _todayPeriod = '';
   String _todayMarkedBy = '';
+
+  final List<String> _semesterMonths = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
+  final Map<String, String> _monthNames = {
+    '2026-06': 'Jun 2026',
+    '2026-07': 'Jul 2026',
+    '2026-08': 'Aug 2026',
+    '2026-09': 'Sep 2026',
+    '2026-10': 'Oct 2026',
+    '2026-11': 'Nov 2026',
+  };
+  
+  Map<String, Map<String, dynamic>> _monthlyStats = {};
+  String _activeMonth = '2026-07';
 
   @override
   void initState() {
@@ -51,12 +66,41 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         break;
       }
     }
+
+    Map<String, Map<String, dynamic>> stats = {};
+    for (var m in _semesterMonths) {
+      stats[m] = {'present': 0, 'total': 0, 'percentage': 100.0};
+    }
+    
+    for (var r in records) {
+      final date = r['date'] ?? '';
+      if (date.length >= 7) {
+        final monthKey = date.substring(0, 7);
+        if (stats.containsKey(monthKey)) {
+          stats[monthKey]!['total'] = stats[monthKey]!['total'] + 1;
+          if (r['status'] == 'Present') {
+            stats[monthKey]!['present'] = stats[monthKey]!['present'] + 1;
+          }
+        }
+      }
+    }
+    
+    stats.forEach((key, val) {
+      int tot = val['total'];
+      int pres = val['present'];
+      if (tot > 0) {
+        val['percentage'] = (pres / tot) * 100.0;
+      } else {
+        val['percentage'] = 100.0;
+      }
+    });
     
     setState(() {
       _attendanceRecords = records;
       _todayStatus = status;
       _todayPeriod = period;
       _todayMarkedBy = markedBy;
+      _monthlyStats = stats;
       _isLoading = false;
     });
   }
@@ -105,7 +149,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         children: [
                           _sidebarTile(Icons.home_outlined, "Dashboard", hasArrow: false),
-                          _sidebarTile(Icons.apartment_outlined, "Academics"),
+                          _sidebarTile(
+                            Icons.apartment_outlined, 
+                            "Academics", 
+                            hasArrow: false, 
+                            onTapOverride: () {
+                              setState(() => _isAcademicsExpanded = !_isAcademicsExpanded);
+                            }
+                          ),
+                          if (_isAcademicsExpanded) ...[
+                            _sidebarSubTile("Academic Calendar"),
+                            _sidebarSubTile("Attendance"),
+                            _sidebarSubTile("Holidays"),
+                          ],
                           _sidebarTile(Icons.credit_card_outlined, "Payments"),
                           _sidebarTile(Icons.rate_review_outlined, "Feedback"),
                           _sidebarTile(Icons.assignment_outlined, "Exam Cell"),
@@ -209,7 +265,33 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _sidebarTile(IconData icon, String label, {bool hasArrow = true, bool isLogout = false}) {
+  Widget _sidebarSubTile(String label) {
+    final bool isSelected = _selectedMenu == label;
+    if (!_isSidebarExpanded) return const SizedBox();
+    
+    return Container(
+      margin: const EdgeInsets.only(left: 32, top: 2, bottom: 2, right: 8),
+      child: ListTile(
+        selected: isSelected,
+        dense: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        selectedTileColor: const Color(0xffF4F5F7),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? primaryMaroon : Colors.grey.shade700,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 12,
+          ),
+        ),
+        onTap: () {
+          setState(() => _selectedMenu = label);
+        },
+      ),
+    );
+  }
+
+  Widget _sidebarTile(IconData icon, String label, {bool hasArrow = true, bool isLogout = false, VoidCallback? onTapOverride}) {
     final bool isSelected = _selectedMenu == label;
     
     return Container(
@@ -241,7 +323,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         trailing: (_isSidebarExpanded && hasArrow && !isLogout)
             ? Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400)
             : null,
-        onTap: () async {
+        onTap: onTapOverride ?? () async {
           if (isLogout) {
             await SessionStorage.clear();
             Navigator.pushReplacementNamed(context, '/login');
@@ -257,8 +339,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     switch (_selectedMenu) {
       case 'Dashboard':
         return _buildDashboardContent();
+      case 'Academic Calendar':
+        return _buildGenericPlaceholder("Academic Calendar");
+      case 'Attendance':
       case 'Academics':
-        return _buildGenericPlaceholder("Academic Performance & Course Outcome Schemas");
+        return _buildAttendanceContent();
+      case 'Holidays':
+        return _buildGenericPlaceholder("Institutional Holidays & Vacation Schedules");
       case 'Payments':
         return _buildGenericPlaceholder("Fee Management, Balance Sheets, Ledger Auditing");
       case 'Feedback':
@@ -282,6 +369,439 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     }
   }
 
+  Widget _buildAttendanceContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final activeStats = _monthlyStats[_activeMonth] ?? {'present': 0, 'total': 0, 'percentage': 100.0};
+    
+    final activeRecords = _attendanceRecords.where((r) {
+      final date = r['date'] ?? '';
+      return date.startsWith(_activeMonth);
+    }).toList();
+
+    Map<String, Map<String, String>> gridData = {};
+    for (var r in activeRecords) {
+      final date = r['date'] ?? '';
+      final period = r['period'] ?? '';
+      final status = r['status'] == 'Present' ? 'P' : 'A';
+      
+      String pKey = "";
+      if (period.startsWith("Period ")) {
+        pKey = "P" + period.substring(7);
+      }
+      
+      if (pKey.isNotEmpty) {
+        if (!gridData.containsKey(date)) {
+          gridData[date] = {};
+        }
+        gridData[date]![pKey] = status;
+      }
+    }
+
+    final sortedDates = gridData.keys.toList()..sort();
+
+    int semesterTotal = 0;
+    int semesterPresent = 0;
+    _monthlyStats.forEach((key, val) {
+      semesterTotal += (val['total'] as int);
+      semesterPresent += (val['present'] as int);
+    });
+    final double semesterPercentage = semesterTotal > 0 ? (semesterPresent / semesterTotal) * 100.0 : 100.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(
+                  color: Color(0xff3949AB),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "Semester Attendance (Month-wise) from June 3, 2026",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "View your attendance records organized by month",
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left, color: Colors.grey),
+                          onPressed: () {},
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: _semesterMonths.map((mKey) {
+                                final isSel = _activeMonth == mKey;
+                                final stats = _monthlyStats[mKey] ?? {'percentage': 100.0};
+                                final double percentage = stats['percentage'];
+                                final String name = _monthNames[mKey] ?? '';
+                                
+                                final isLow = percentage < 75.0;
+                                final badgeColor = isLow ? Colors.red : Colors.green;
+                                
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() => _activeMonth = mKey);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: isSel ? primaryMaroon : Colors.transparent,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: TextStyle(
+                                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                            color: isSel ? primaryMaroon : Colors.black87,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: badgeColor,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            "${percentage.toStringAsFixed(0)}%",
+                                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right, color: Colors.grey),
+                          onPressed: () {},
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(child: _metricCard("Present", activeStats['present'].toString(), Colors.green)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _metricCard("Total Classes", activeStats['total'].toString(), Colors.blue)),
+                        const SizedBox(width: 16),
+                        Expanded(child: _metricCard("Percentage", "${(activeStats['percentage'] as double).toStringAsFixed(2)}%", Colors.teal, valueColor: (activeStats['percentage'] as double) < 75 ? Colors.red : Colors.green)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (sortedDates.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Text("No attendance records for this month", style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                        ),
+                      )
+                    else
+                      Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(2),
+                          1: FlexColumnWidth(1),
+                          2: FlexColumnWidth(1),
+                          3: FlexColumnWidth(1),
+                          4: FlexColumnWidth(1),
+                          5: FlexColumnWidth(1),
+                          6: FlexColumnWidth(1),
+                        },
+                        border: TableBorder.all(color: Colors.grey.shade300, width: 1),
+                        children: [
+                          TableRow(
+                            decoration: const BoxDecoration(color: Color(0xff3966F6)),
+                            children: [
+                              _gridHeader("Date"),
+                              _gridHeader("P1"),
+                              _gridHeader("P2"),
+                              _gridHeader("P3"),
+                              _gridHeader("P4"),
+                              _gridHeader("P5"),
+                              _gridHeader("P6"),
+                            ],
+                          ),
+                          ...sortedDates.map((date) {
+                            final periods = gridData[date] ?? {};
+                            DateTime dt = DateTime.parse(date);
+                            String dayNum = DateFormat('dd-MM-yyyy').format(dt);
+                            String dayName = DateFormat('EEE').format(dt);
+                            
+                            return TableRow(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(dayNum, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Text(dayName, style: const TextStyle(fontSize: 9, color: Colors.grey)),
+                                    ],
+                                  ),
+                                ),
+                                _gridCell(periods['P1']),
+                                _gridCell(periods['P2']),
+                                _gridCell(periods['P3']),
+                                _gridCell(periods['P4']),
+                                _gridCell(periods['P5']),
+                                _gridCell(periods['P6']),
+                              ],
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 32),
+        _buildMonthlySummaryTable(semesterPresent, semesterTotal, semesterPercentage),
+        const SizedBox(height: 32),
+        _buildSemesterSummary(semesterPresent, semesterTotal, semesterPercentage),
+      ],
+    );
+  }
+
+  Widget _metricCard(String label, String value, Color borderColor, {Color? valueColor}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border(
+          left: BorderSide(color: borderColor, width: 4),
+          top: BorderSide(color: Colors.grey.shade100),
+          right: BorderSide(color: Colors.grey.shade100),
+          bottom: BorderSide(color: Colors.grey.shade100),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(color: valueColor ?? Colors.black87, fontSize: 20, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _gridHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Center(
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _gridCell(String? status) {
+    Color color = Colors.transparent;
+    String label = "";
+    if (status == 'P') {
+      color = Colors.green;
+      label = "P";
+    } else if (status == 'A') {
+      color = Colors.red;
+      label = "A";
+    }
+    return Container(
+      height: 48,
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _buildMonthlySummaryTable(int semesterPresent, int semesterTotal, double semesterPercentage) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Color(0xff3949AB),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+            ),
+            child: const Text(
+              "Monthly Attendance Summary",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+            ),
+          ),
+          Table(
+            columnWidths: const {
+              0: FlexColumnWidth(2),
+              1: FlexColumnWidth(1),
+              2: FlexColumnWidth(1),
+              3: FlexColumnWidth(1),
+            },
+            border: TableBorder(horizontalInside: BorderSide(color: Colors.grey.shade100)),
+            children: [
+              TableRow(
+                decoration: const BoxDecoration(color: Color(0xffF8F9FA)),
+                children: [
+                  _summaryTh("Month"),
+                  _summaryTh("Classes Attended"),
+                  _summaryTh("Total Classes"),
+                  _summaryTh("Percentage"),
+                ],
+              ),
+              ..._semesterMonths.map((mKey) {
+                final stats = _monthlyStats[mKey] ?? {'present': 0, 'total': 0, 'percentage': 100.0};
+                final double percentage = stats['percentage'];
+                final String name = _monthNames[mKey] ?? '';
+                return TableRow(
+                  children: [
+                    _summaryTd(name),
+                    _summaryTd(stats['present'].toString()),
+                    _summaryTd(stats['total'].toString()),
+                    _summaryTd(
+                      "${percentage.toStringAsFixed(2)}%", 
+                      color: percentage < 75.0 ? Colors.red : Colors.green,
+                      isBold: true,
+                    ),
+                  ],
+                );
+              }).toList(),
+              TableRow(
+                decoration: const BoxDecoration(color: Color(0xffEBF3FE)),
+                children: [
+                  _summaryTd("Semester Total", isBold: true),
+                  _summaryTd(semesterPresent.toString(), isBold: true),
+                  _summaryTd(semesterTotal.toString(), isBold: true),
+                  _summaryTd(
+                    "${semesterPercentage.toStringAsFixed(2)}%", 
+                    color: semesterPercentage < 75.0 ? Colors.red : Colors.green,
+                    isBold: true,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryTh(String label) => Padding(padding: const EdgeInsets.all(12), child: Center(child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))));
+  Widget _summaryTd(String value, {Color? color, bool isBold = false}) => Padding(
+    padding: const EdgeInsets.all(12), 
+    child: Center(
+      child: Text(
+        value, 
+        style: TextStyle(
+          fontSize: 12, 
+          color: color ?? Colors.black87,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildSemesterSummary(int semesterPresent, int semesterTotal, double semesterPercentage) {
+    final isLow = semesterPercentage < 75.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Semester Summary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _metricCard("Total Present", semesterPresent.toString(), Colors.green)),
+            const SizedBox(width: 16),
+            Expanded(child: _metricCard("Total Classes", semesterTotal.toString(), Colors.blue)),
+            const SizedBox(width: 16),
+            Expanded(child: _metricCard("Overall Percentage", "${semesterPercentage.toStringAsFixed(2)}%", Colors.teal, valueColor: isLow ? Colors.red : Colors.green)),
+          ],
+        ),
+        if (isLow) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.orange.shade800, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Warning! Your attendance is below 75%. Regular attendance is important for academic success.",
+                    style: TextStyle(color: Colors.orange.shade900, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildDashboardContent() {
     if (_isLoading) {
       return const Center(
@@ -303,8 +823,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.grey.shade800),
             children: [
               TextSpan(text: widget.studentName, style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))
-            ]
-          )
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         Card(
@@ -312,7 +832,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(4),
-            side: BorderSide(color: Colors.grey.shade200, width: 1.5)
+            side: BorderSide(color: Colors.grey.shade200, width: 1.5),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
@@ -326,7 +846,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     Icon(
                       isPresentToday ? Icons.check_circle : Icons.cancel, 
                       color: isPresentToday ? Colors.green : Colors.red, 
-                      size: 24
+                      size: 24,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -334,8 +854,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       style: TextStyle(
                         color: isPresentToday ? Colors.green : Colors.red, 
                         fontSize: 22, 
-                        fontWeight: FontWeight.bold
-                      )
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -344,7 +864,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   isPresentToday 
                       ? "Marked by $_todayMarkedBy for $_todayPeriod" 
                       : "Not recognized yet today", 
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400)
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 ),
               ],
             ),
@@ -355,7 +875,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.grey.shade200, width: 1.5)
+            border: Border.all(color: Colors.grey.shade200, width: 1.5),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,8 +891,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 children: [
                   TableRow(
                     children: [
-                      _th("Date"), _th("Period"), _th("Status")
-                    ]
+                      _th("Date"), _th("Period"), _th("Status"),
+                    ],
                   ),
                   if (_attendanceRecords.isEmpty)
                     TableRow(
@@ -383,10 +903,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                         ),
                         const SizedBox(),
                         const SizedBox(),
-                      ]
+                      ],
                     )
                   else
-                    ..._attendanceRecords.map((r) {
+                    ..._attendanceRecords.take(5).map((r) {
                       final bool isPres = r['status'] == 'Present';
                       return TableRow(
                         children: [
@@ -400,23 +920,23 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: isPres ? Colors.green.shade600 : Colors.red.shade600, 
-                                  borderRadius: BorderRadius.circular(4)
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   isPres ? "Present" : "Absent", 
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ),
                             ),
-                          )
-                        ]
+                          ),
+                        ],
                       );
-                    }).toList()
+                    }).toList(),
                 ],
-              )
+              ),
             ],
           ),
-        )
+        ),
       ],
     );
   }
@@ -428,7 +948,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey.shade200, width: 1.5)
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -777,7 +777,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             labelText: "Section",
                             border: OutlineInputBorder(),
                           ),
-                          items: ['A', 'B', 'C']
+                          items: ['A', 'B', 'C', 'D', 'E', 'F', 'G']
                               .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                               .toList(),
                           onChanged: (val) {
