@@ -179,6 +179,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool mobile = MediaQuery.of(context).size.width < 800;
+    final double sidebarWidth = _isSidebarExpanded ? 260 : (mobile ? 0 : 70);
+    final double floatingBtnLeft = _isSidebarExpanded ? 242 : (mobile ? 10 : 52);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -187,11 +191,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // --- SIDEBAR NAVIGATION ---
               AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                width: _isSidebarExpanded ? 260 : 70,
+                width: sidebarWidth,
                 decoration: BoxDecoration(
                   color: Colors.white, 
-                  border: Border(right: BorderSide(color: Colors.grey.shade200, width: 1.5)),
+                  border: Border(right: BorderSide(color: Colors.grey.shade200, width: sidebarWidth > 0 ? 1.5 : 0)),
                 ),
+                clipBehavior: Clip.hardEdge,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -289,7 +294,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           // --- PERSISTENT FLOATING SIDEBAR ANIMATION TOGGLE KEY ---
           AnimatedPositioned(
             duration: const Duration(milliseconds: 250),
-            left: _isSidebarExpanded ? 242 : 52,
+            left: floatingBtnLeft,
             top: 35,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,

@@ -68,11 +68,10 @@ def init_db():
         cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept) VALUES (%s, %s, %s, %s, %s)",
                        ('faculty', 'Dr. Satish Kumar', generate_password_hash('faculty123'), 'faculty', 'CSE'))
                        
-    # Seed default student Mahadev if empty
     cursor.execute("SELECT * FROM users WHERE userid = '24X01A05AT'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO users (userid, name, password_hash, role, dept, year, section, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                       ('24X01A05AT', 'Mahadev', generate_password_hash('student123'), 'student', 'CSE', 'III', 'B', 'approved'))
+                       ('24X01A05AT', 'Mahadev', generate_password_hash('24X01A05AT'), 'student', 'CSE', 'III', 'B', 'approved'))
                        
     # Revert fake generated attendance to just single real row
     cursor.execute("DELETE FROM attendance WHERE roll_number = '24X01A05AT' AND (date LIKE '2026-06-%%' OR date <= '2026-07-09')")
@@ -117,14 +116,25 @@ def login():
         return jsonify({"error": "Invalid Faculty Credentials"}), 401
 
     elif role == 'Student/Parent':
-        cursor.execute("SELECT * FROM users WHERE userid = %s AND role = 'student'", (username,))
+        is_parent = False
+        actual_username = username
+        if (username.endswith('P') or username.endswith('p')) and len(username) > 1:
+            is_parent = True
+            actual_username = username[:-1]
+
+        cursor.execute("SELECT * FROM users WHERE userid = %s AND role = 'student'", (actual_username,))
         user = cursor.fetchone()
         conn.close()
         if user:
             if user['status'] == 'pending':
                 return jsonify({"error": "Approval pending. Please wait for Admin validation."}), 403
-            if check_password_hash(user['password_hash'], password):
-                return jsonify({"token": f"mock-student-token-{username}", "role": "Student/Parent", "name": user['name']}), 200
+            
+            if is_parent:
+                if password == username:
+                    return jsonify({"token": f"mock-parent-token-{username}", "role": "Student/Parent", "name": f"{user['name']} (Parent)"}), 200
+            else:
+                if check_password_hash(user['password_hash'], password):
+                    return jsonify({"token": f"mock-student-token-{username}", "role": "Student/Parent", "name": user['name']}), 200
         return jsonify({"error": "Invalid Student Credentials"}), 401
 
     return jsonify({"error": "Invalid role configuration"}), 400
