@@ -30,7 +30,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String _todayPeriod = '';
   String _todayMarkedBy = '';
 
-  final List<String> _semesterMonths = ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'];
+  List<String> _semesterMonths = ['2026-06', '2026-07'];
   final Map<String, String> _monthNames = {
     '2026-06': 'Jun 2026',
     '2026-07': 'Jul 2026',
@@ -42,6 +42,23 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   
   Map<String, Map<String, dynamic>> _monthlyStats = {};
   String _activeMonth = '2026-07';
+
+  List<String> _getSemesterMonths() {
+    List<String> months = [];
+    DateTime start = DateTime(2026, 6);
+    DateTime now = DateTime.now();
+    if (now.isBefore(start)) {
+      now = start;
+    }
+    DateTime current = start;
+    while (current.year < now.year || (current.year == now.year && current.month <= now.month)) {
+      String y = current.year.toString();
+      String m = current.month.toString().padLeft(2, '0');
+      months.add("$y-$m");
+      current = DateTime(current.year, current.month + 1);
+    }
+    return months;
+  }
 
   @override
   void initState() {
@@ -64,6 +81,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         period = r['period'] ?? '';
         markedBy = r['marked_by'] ?? '';
         break;
+      }
+    }
+
+    _semesterMonths = _getSemesterMonths();
+    if (!_semesterMonths.contains(_activeMonth)) {
+      if (_semesterMonths.isNotEmpty) {
+        _activeMonth = _semesterMonths.last;
+      } else {
+        _activeMonth = '2026-07';
       }
     }
 
