@@ -61,21 +61,46 @@ class SQLiteCursorWrapper:
         return [dict(r) if not isinstance(r, dict) else r for r in res]
 
 def get_db_connection():
-    db_host = os.environ.get('DB_HOST')
-    if db_host:
+    host = os.environ.get('DB_HOST', 'localhost')
+    port = int(os.environ.get('DB_PORT', 3306))
+    user = os.environ.get('DB_USER', 'root')
+    password = os.environ.get('DB_PASS', 'mysqlpass')
+    database = os.environ.get('DB_NAME', 'nrcm_att')
+
+    def try_mysql(pwd):
         try:
             return pymysql.connect(
-                host=db_host,
-                port=int(os.environ.get('DB_PORT', 3306)),
-                user=os.environ.get('DB_USER', 'root'),
-                password=os.environ.get('DB_PASS', 'mysqlpass'),
-                database=os.environ.get('DB_NAME', 'nrcm_att'),
-                cursorclass=pymysql.cursors.DictCursor
+                host=host, port=port, user=user, password=pwd,
+                database=database, cursorclass=pymysql.cursors.DictCursor,
+                connect_timeout=2
             )
-        except Exception as e:
-            print("MySQL connection failed, falling back to SQLite:", e)
+        except pymysql.err.OperationalError as err:
+            if err.args[0] == 1049: # Unknown database
+                tmp_conn = pymysql.connect(
+                    host=host, port=port, user=user, password=pwd,
+                    connect_timeout=2
+                )
+                with tmp_conn.cursor() as cur:
+                    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{database}`")
+                tmp_conn.commit()
+                tmp_conn.close()
+                return pymysql.connect(
+                    host=host, port=port, user=user, password=pwd,
+                    database=database, cursorclass=pymysql.cursors.DictCursor,
+                    connect_timeout=2
+                )
+            raise err
 
-    # Fallback to local SQLite database (works anywhere without a running MySQL server)
+    try:
+        return try_mysql(password)
+    except Exception:
+        if password == 'mysqlpass':
+            try:
+                return try_mysql('')
+            except Exception:
+                pass
+
+    # Fallback to local SQLite database (works on Render free tier or when MySQL server is offline)
     conn = sqlite3.connect('nrcm_portal.db')
     conn.row_factory = sqlite3.Row
     return SQLiteConnectionWrapper(conn)
