@@ -1,5 +1,6 @@
 import os
 import pymysql
+import sqlite3
 import csv
 import io
 from datetime import datetime
@@ -10,16 +11,74 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 CORS(app)  # Enables cross-origin requests for Flutter Web local development
 
+class SQLiteConnectionWrapper:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def cursor(self):
+        return SQLiteCursorWrapper(self.conn.cursor())
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.conn.close()
+
+class SQLiteCursorWrapper:
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def execute(self, query, args=None):
+        q = query.replace('%s', '?')
+        q = q.replace('INT AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')
+        q = q.replace('VARCHAR(100)', 'TEXT').replace('VARCHAR(255)', 'TEXT').replace('VARCHAR(50)', 'TEXT')
+        
+        if "SHOW TABLES LIKE 'users'" in q:
+            q = "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+        elif "SHOW COLUMNS FROM users LIKE 'password_plain'" in q:
+            self.cursor.execute("PRAGMA table_info(users)")
+            cols = [r[1] for r in self.cursor.fetchall()]
+            if 'password_plain' in cols:
+                self.cursor.execute("SELECT 'password_plain' as Field")
+            else:
+                self.cursor.execute("SELECT 1 WHERE 1=0")
+            return self.cursor
+
+        if args is not None:
+            return self.cursor.execute(q, args)
+        return self.cursor.execute(q)
+
+    def fetchone(self):
+        res = self.cursor.fetchone()
+        if res is None:
+            return None
+        return dict(res) if not isinstance(res, dict) else res
+
+    def fetchall(self):
+        res = self.cursor.fetchall()
+        if not res:
+            return []
+        return [dict(r) if not isinstance(r, dict) else r for r in res]
+
 def get_db_connection():
-    conn = pymysql.connect(
-        host=os.environ.get('DB_HOST', 'localhost'),
-        port=int(os.environ.get('DB_PORT', 3306)),
-        user=os.environ.get('DB_USER', 'root'),
-        password=os.environ.get('DB_PASS', 'mysqlpass'),
-        database=os.environ.get('DB_NAME', 'nrcm_att'),
-        cursorclass=pymysql.cursors.DictCursor
-    )
-    return conn
+    db_host = os.environ.get('DB_HOST')
+    if db_host:
+        try:
+            return pymysql.connect(
+                host=db_host,
+                port=int(os.environ.get('DB_PORT', 3306)),
+                user=os.environ.get('DB_USER', 'root'),
+                password=os.environ.get('DB_PASS', 'mysqlpass'),
+                database=os.environ.get('DB_NAME', 'nrcm_att'),
+                cursorclass=pymysql.cursors.DictCursor
+            )
+        except Exception as e:
+            print("MySQL connection failed, falling back to SQLite:", e)
+
+    # Fallback to local SQLite database (works anywhere without a running MySQL server)
+    conn = sqlite3.connect('nrcm_portal.db')
+    conn.row_factory = sqlite3.Row
+    return SQLiteConnectionWrapper(conn)
 
 def init_db():
     conn = get_db_connection()

@@ -27,4 +27,4 @@ frontend/pubspec.lock
 frontend/*.iml
 
 # Database
-# nrcm_database.db # Keep commented out if the user needs to push the seeded database
+*.db
