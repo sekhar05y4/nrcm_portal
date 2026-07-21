@@ -158,6 +158,11 @@ def init_db():
     conn.commit()
     conn.close()
 
+try:
+    init_db()
+except Exception as e:
+    print("Database initialization error:", e)
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json() or {}
