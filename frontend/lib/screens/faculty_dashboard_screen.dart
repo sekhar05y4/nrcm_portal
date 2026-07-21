@@ -38,123 +38,164 @@ class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final bool mobile = MediaQuery.of(context).size.width < 800;
-    final double sidebarWidth = _isSidebarExpanded ? 260 : (mobile ? 0 : 70);
-    final double floatingBtnLeft = _isSidebarExpanded ? 242 : (mobile ? 10 : 52);
+    final double sidebarWidth = 270;
+    final double currentSidebarLeft = _isSidebarExpanded 
+        ? 0 
+        : (mobile ? -sidebarWidth : -sidebarWidth + 70);
+
+    final double mainContentLeft = mobile ? 0 : (_isSidebarExpanded ? 270 : 70);
 
     return Scaffold(
       body: Stack(
         children: [
-          Row(
-            children: [
-              // --- SIDEBAR NAVIGATION ---
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: sidebarWidth,
-                decoration: BoxDecoration(
-                  color: Colors.white, 
-                  border: Border(right: BorderSide(color: Colors.grey.shade200, width: sidebarWidth > 0 ? 1.5 : 0)),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    if (_isSidebarExpanded)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Column(
-                          children: [
-                            Image.asset('assets/nrcm_logo.png', height: 60, errorBuilder: (c, e, s) => Container()),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
-                      )
-                    else
-                      Center(
-                        child: CircleAvatar(
-                          backgroundColor: primaryMaroon.withAlpha(20),
-                          radius: 20,
-                          child: Icon(Icons.co_present, color: primaryMaroon, size: 20),
-                        ),
-                      ),
-                    const Divider(height: 20, thickness: 1),
-                    
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        children: [
-                          _sidebarTile(Icons.dashboard_outlined, "Dashboard", hasArrow: false),
-                          _sidebarTile(Icons.fact_check_outlined, "Mark Attendance", hasArrow: false),
-                          _sidebarTile(Icons.assessment_outlined, "View Reports", hasArrow: false),
-                          const Divider(height: 20, thickness: 1),
-                          _sidebarTile(Icons.logout_outlined, "Logout", hasArrow: false, isLogout: true),
-                        ],
-                      ),
+          // 1. MAIN CONTENT VIEWPORT (Base Layer)
+          Positioned(
+            left: mainContentLeft,
+            top: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              color: const Color(0xffF8F9FA),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 60,
+                    padding: EdgeInsets.only(left: (mobile && !_isSidebarExpanded) ? 54 : 24, right: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                     ),
-                  ],
-                ),
-              ),
-
-              // --- MAIN CONTENT VIEWPORT ---
-              Expanded(
-                child: Container(
-                  color: const Color(0xffF8F9FA),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 60,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Faculty Portal | $_selectedMenu",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryMaroon),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Row(
                           children: [
                             Text(
-                              "Faculty Portal | $_selectedMenu",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryMaroon),
+                              widget.rollNumber,
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700, fontSize: 13),
                             ),
-                            Row(
-                              children: [
-                                Text(
-                                  widget.rollNumber,
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700, fontSize: 13),
-                                ),
-                                const SizedBox(width: 12),
-                                CircleAvatar(
-                                  backgroundColor: primaryMaroon,
-                                  radius: 16,
-                                  child: Text(
-                                    widget.studentName.isNotEmpty ? widget.studentName[0].toUpperCase() : 'F',
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                )
-                              ],
+                            const SizedBox(width: 12),
+                            CircleAvatar(
+                              backgroundColor: primaryMaroon,
+                              radius: 16,
+                              child: Text(
+                                widget.studentName.isNotEmpty ? widget.studentName[0].toUpperCase() : 'F',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
                             )
                           ],
-                        ),
-                      ),
-                      
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(32),
-                          child: _renderActiveView(),
-                        ),
-                      )
-                    ],
+                        )
+                      ],
+                    ),
                   ),
-                ),
+                  
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: _renderActiveView(),
+                    ),
+                  )
+                ],
               ),
-            ],
+            ),
           ),
 
-          // --- PERSISTENT FLOATING SIDEBAR ANIMATION TOGGLE KEY ---
+          // 2. BACKDROP MASK
+          if (mobile && _isSidebarExpanded)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => setState(() => _isSidebarExpanded = false),
+                child: Container(
+                  color: Colors.black.withOpacity(0.5),
+                ),
+              ),
+            ),
+
+          // 3. OVERLAY SIDEBAR DRAWER
           AnimatedPositioned(
             duration: const Duration(milliseconds: 250),
-            left: floatingBtnLeft,
-            top: 35,
+            curve: Curves.easeInOut,
+            left: currentSidebarLeft,
+            top: 0,
+            bottom: 0,
+            width: sidebarWidth,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  if (_isSidebarExpanded)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Image.asset('assets/nrcm_logo.png', height: 60, errorBuilder: (c, e, s) => Container()),
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, thickness: 1),
+                  
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      children: [
+                        _sidebarTile(Icons.dashboard_outlined, "Dashboard", hasArrow: false),
+                        _sidebarTile(Icons.fact_check_outlined, "Mark Attendance", hasArrow: false),
+                        _sidebarTile(Icons.assessment_outlined, "View Reports", hasArrow: false),
+                        const Divider(height: 20, thickness: 1),
+                        _sidebarTile(Icons.logout_outlined, "Logout", hasArrow: false, isLogout: true),
+                      ],
+                    ),
+                  ),
+
+                  // Sidebar Footer: Follow Us & Social Media Icons
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Follow Us",
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xffE11D74)),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _socialIcon(Icons.facebook, Colors.indigo),
+                            _socialIcon(Icons.camera_alt, Colors.pink),
+                            _socialIcon(Icons.close, Colors.black),
+                            _socialIcon(Icons.link, Colors.blue.shade700),
+                            _socialIcon(Icons.play_arrow, Colors.red),
+                            _socialIcon(Icons.message, Colors.green),
+                          ],
+                        )
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+
+          // 4. FLOATING PINK TOGGLE BUTTON
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            left: _isSidebarExpanded ? 252 : (mobile ? 12 : 54),
+            top: 28,
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
@@ -165,6 +206,13 @@ class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
                   decoration: BoxDecoration(
                     color: accentPink, 
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ]
                   ),
                   child: Icon(
                     _isSidebarExpanded ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios,
@@ -177,6 +225,19 @@ class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
           )
         ],
       ),
+    );
+  }
+
+  Widget _socialIcon(IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: Colors.white, size: 14),
     );
   }
 
